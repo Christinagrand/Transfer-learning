@@ -1,0 +1,82 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blue Whale, Dolphin and Shark Classifier</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>Blue Whale, Dolphin and Shark Classifier</h1>
+        <div class="upload-section">
+            <button onclick="triggerFileInput()" class="upload-button">UPLOAD IMAGE</button>
+            <input type="file" accept="image/*" id="imageUpload" onchange="previewImage()" style="display: none;">
+            <div id="imagePreviewContainer">
+                <img id="imagePreview" src="" alt="Image Preview">
+            </div>
+        </div>
+        <button onclick="predictImage()" class="predict-button">CLASSIFY IMAGE</button>
+        <p id="prediction">Prediction will appear here</p>
+    </div>
+
+    <script>
+        let model;
+        let imageUploaded = false;
+
+        async function loadModel() {
+            model = await tf.loadGraphModel('tfjs_model/model.json');
+        }
+
+        async function predictImage() {
+            if (!imageUploaded) {
+                document.getElementById('prediction').innerText = 'Please upload an image first.';
+                return;
+            }
+
+            const imageElement = document.getElementById('imagePreview');
+            const image = await createImageBitmap(imageElement);
+
+            const tensor = tf.browser.fromPixels(image)
+                             .resizeNearestNeighbor([120, 120]) // Adjust size as needed
+                             .expandDims()
+                             .toFloat()
+                             .div(tf.scalar(255.0));
+
+            const predictions = await model.predict(tensor).data();
+
+            const classes = ['Blue Whale', 'Dolphin', 'Shark'];
+            let predictionText = "Prediction Probabilities:<br>";
+
+            predictions.forEach((probability, index) => {
+                predictionText += `${classes[index]}: ${(probability * 100).toFixed(2)}%<br>`;
+            });
+
+            document.getElementById('prediction').innerHTML = predictionText;
+        }
+
+        function triggerFileInput() {
+            document.getElementById('imageUpload').click();
+        }
+
+        function previewImage() {
+            const file = document.getElementById('imageUpload').files[0];
+            if (file) {
+                const reader = new FileReader();
+
+                reader.onload = function(event) {
+                    document.getElementById('imagePreview').src = event.target.result;
+                    imageUploaded = true; // Set flag to true when an image is uploaded
+                    document.getElementById('prediction').innerText = ''; // Clear previous prediction message
+                };
+
+                reader.readAsDataURL(file);
+            }
+        }
+
+        loadModel();
+    </script>
+</body>
+</html>
